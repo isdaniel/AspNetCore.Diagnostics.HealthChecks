@@ -1,52 +1,35 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure.Core;
+using HealthChecks.AzureServiceBus.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace HealthChecks.AzureServiceBus
+namespace HealthChecks.AzureServiceBus;
+
+public class AzureServiceBusTopicHealthCheck : AzureServiceBusHealthCheck<AzureServiceBusTopicHealthCheckOptions>, IHealthCheck
 {
-    public class AzureServiceBusTopicHealthCheck
-        : AzureServiceBusHealthCheck, IHealthCheck
+    public AzureServiceBusTopicHealthCheck(AzureServiceBusTopicHealthCheckOptions options, ServiceBusClientProvider clientProvider)
+        : base(options, clientProvider)
     {
-        private readonly string _topicName;
-        private string _connectionKey;
+        Guard.ThrowIfNull(options.TopicName, true);
+    }
 
-        public AzureServiceBusTopicHealthCheck(string connectionString, string topicName) : base(connectionString)
+    public AzureServiceBusTopicHealthCheck(AzureServiceBusTopicHealthCheckOptions options)
+        : this(options, new ServiceBusClientProvider())
+    { }
+
+    /// <inheritdoc />
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
+        CancellationToken cancellationToken = default)
+    {
+        try
         {
-            if (string.IsNullOrEmpty(topicName))
-            {
-                throw new ArgumentNullException(nameof(topicName));
-            }
+            var managementClient = ClientCache.GetOrAdd(ConnectionKey, _ => CreateManagementClient());
 
-            _topicName = topicName;
+            _ = await managementClient.GetTopicRuntimePropertiesAsync(Options.TopicName, cancellationToken).ConfigureAwait(false);
+
+            return HealthCheckResult.Healthy();
         }
-
-        public AzureServiceBusTopicHealthCheck(string endpoint, string topicName, TokenCredential tokenCredential) : base(endpoint, tokenCredential)
+        catch (Exception ex)
         {
-            if (string.IsNullOrEmpty(topicName))
-            {
-                throw new ArgumentNullException(nameof(topicName));
-            }
-
-            _topicName = topicName;
+            return new HealthCheckResult(context.Registration.FailureStatus, exception: ex);
         }
-
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
-            CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                var managementClient = ManagementClientConnections.GetOrAdd(ConnectionKey, _ => CreateManagementClient());
-                _ = await managementClient.GetTopicRuntimePropertiesAsync(_topicName, cancellationToken);
-                return HealthCheckResult.Healthy();
-            }
-            catch (Exception ex)
-            {
-                return new HealthCheckResult(context.Registration.FailureStatus, exception: ex);
-            }
-        }
-
-        protected override string ConnectionKey => _connectionKey ??= $"{Prefix}_{_topicName}";
     }
 }

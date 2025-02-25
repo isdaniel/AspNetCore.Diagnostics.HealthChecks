@@ -1,21 +1,27 @@
-﻿
-using HealthChecks.UI.Core.Data;
+using HealthChecks.UI.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+public static class HealthChecksUIBuilderExtensions
 {
-    public static class HealthChecksUIBuilderExtensions
+    public static HealthChecksUIBuilder AddSqliteStorage(
+        this HealthChecksUIBuilder builder,
+        string connectionString,
+        Action<DbContextOptionsBuilder>? configureOptions = null,
+        Action<SqliteDbContextOptionsBuilder>? configureSqliteOptions = null)
     {
-        public static HealthChecksUIBuilder AddSqliteStorage(this HealthChecksUIBuilder builder, string connectionString, Action<DbContextOptionsBuilder> configureOptions = null)
+        builder.Services.AddDbContext<HealthChecksDb>(optionsBuilder =>
         {
-            builder.Services.AddDbContext<HealthChecksDb>(options =>
+            configureOptions?.Invoke(optionsBuilder);
+            optionsBuilder.UseSqlite(connectionString, sqliteOptionsBuilder =>
             {
-                configureOptions?.Invoke(options);
-                options.UseSqlite(connectionString, s => s.MigrationsAssembly("HealthChecks.UI.SQLite.Storage"));
+                sqliteOptionsBuilder.MigrationsAssembly("HealthChecks.UI.SQLite.Storage");
+                configureSqliteOptions?.Invoke(sqliteOptionsBuilder);
             });
+        });
 
-            return builder;
-        }
+        return builder;
     }
 }

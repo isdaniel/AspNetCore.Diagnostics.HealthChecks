@@ -1,24 +1,21 @@
-﻿using Microsoft.AspNetCore.Builder;
-using System;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Builder;
 
-namespace HealthChecks.UI
+namespace HealthChecks.UI;
+
+internal class HealthCheckUIConventionBuilder : IEndpointConventionBuilder
 {
-    class HealthCheckUIConventionBuilder : IEndpointConventionBuilder
+    private readonly IEnumerable<IEndpointConventionBuilder> _endpoints;
+
+    public HealthCheckUIConventionBuilder(IEnumerable<IEndpointConventionBuilder> endpoints)
     {
-        private readonly IEnumerable<IEndpointConventionBuilder> _endpoints;
+        _endpoints = Guard.ThrowIfNull(endpoints);
+    }
 
-        public HealthCheckUIConventionBuilder(IEnumerable<IEndpointConventionBuilder> endpoints)
+    public void Add(Action<EndpointBuilder> convention)
+    {
+        foreach (var endpoint in _endpoints)
         {
-            _endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
-        }
-
-        public void Add(Action<EndpointBuilder> convention)
-        {
-            foreach (var endpoint in _endpoints)
-            {
-                endpoint.Add(convention);
-            }
+            endpoint.Add(convention);
         }
     }
 }

@@ -1,47 +1,36 @@
-name: HealthChecks KAFKA CI
+name: HealthChecks Kafka CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
     paths:
       - src/HealthChecks.Kafka/**
       - test/HealthChecks.Kafka.Tests/**
+      - test/_SHARED/**
       - .github/workflows/healthchecks_kafka_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
     tags-ignore:
       - release-*
+      - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.Kafka/**
-    - test/HealthChecks.Kafka.Tests/**
-    - .github/workflows/healthchecks_kafka_ci.yml
+      - src/HealthChecks.Kafka/**
+      - test/HealthChecks.Kafka.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_kafka_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    services:
-      zookeeper:
-        image: confluent/zookeeper
-        ports:
-          - 2181:2181
-      kafka:
-        image: confluent/kafka
-        ports:
-          - 9092:9092
-        env: 
-          KAFKA_ADVERTISED_HOST_NAME: localhost
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-          KAFKA_ADVERTISED_PORT: 9092
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.Kafka/HealthChecks.Kafka.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.Kafka/HealthChecks.Kafka.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.Kafka.Tests/HealthChecks.Kafka.Tests.csproj --verbosity normal
+    uses: ./.github/workflows/reusable_ci_workflow.yml
+    with:
+      PROJECT_PATH: ./src/HealthChecks.Kafka/HealthChecks.Kafka.csproj
+      TEST_PROJECT_PATH: ./test/HealthChecks.Kafka.Tests/HealthChecks.Kafka.Tests.csproj
+      CODECOV_FLAGS: Kafka

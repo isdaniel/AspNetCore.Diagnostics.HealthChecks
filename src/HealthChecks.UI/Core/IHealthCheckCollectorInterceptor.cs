@@ -1,11 +1,9 @@
-﻿using HealthChecks.UI.Core.Data;
-using System.Threading.Tasks;
+using HealthChecks.UI.Data;
 
-namespace HealthChecks.UI.Core
+namespace HealthChecks.UI.Core;
+
+public interface IHealthCheckCollectorInterceptor
 {
-    public interface IHealthCheckCollectorInterceptor
-    {
-        ValueTask OnCollectExecuting(HealthCheckConfiguration healthCheck);
-        ValueTask OnCollectExecuted(UIHealthReport report);
-    }
+    ValueTask OnCollectExecuting(HealthCheckConfiguration healthCheck);
+    ValueTask OnCollectExecuted(UIHealthReport report);
 }

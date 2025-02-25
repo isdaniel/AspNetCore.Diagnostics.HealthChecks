@@ -1,47 +1,162 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-using System.Linq;
-using Xunit;
+namespace HealthChecks.Elasticsearch.Tests.DependencyInjection;
 
-
-namespace HealthChecks.Elasticsearch.Tests.DependencyInjection
+public class elasticsearch_registration_should
 {
-    public class elasticsearch_registration_should
+    [Fact]
+    public void add_health_check_when_properly_configured()
     {
-        [Fact]
-        public void add_health_check_when_properly_configured()
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddElasticsearch("uri");
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("elasticsearch");
+        check.ShouldBeOfType<ElasticsearchHealthCheck>();
+    }
+
+    [Fact]
+    public void add_named_health_check_when_properly_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddElasticsearch("uri", name: "my-elasticsearch");
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("my-elasticsearch");
+        check.ShouldBeOfType<ElasticsearchHealthCheck>();
+    }
+
+    [Fact]
+    public void create_client_with_user_configured_request_timeout()
+    {
+        var connectionString = @"https://localhost:9200";
+
+        var services = new ServiceCollection();
+        var settings = new ElasticsearchOptions();
+        services.AddHealthChecks().AddElasticsearch(setup =>
         {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddElasticsearch("uri");
+            setup.UseServer(connectionString);
+            setup.RequestTimeout = new TimeSpan(0, 0, 6);
+            settings = setup;
+        });
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        //Ensure no further modifications were carried by extension method
+        settings.RequestTimeout.ShouldNotBeNull();
+        settings.RequestTimeout.ShouldBe(new TimeSpan(0, 0, 6));
+    }
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+    [Fact]
+    public void create_client_with_configured_healthcheck_timeout_when_no_request_timeout_is_configured()
+    {
+        var connectionString = @"https://localhost:9200";
+        var services = new ServiceCollection();
+        var settings = new ElasticsearchOptions();
 
-            registration.Name.Should().Be("elasticsearch");
-            check.GetType().Should().Be(typeof(ElasticsearchHealthCheck));
-        }
-
-        [Fact]
-        public void add_named_health_check_when_properly_configured()
+        services.AddHealthChecks().AddElasticsearch(setup =>
         {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddElasticsearch("uri", name: "my-elasticsearch");
+            setup.UseServer(connectionString);
+            settings = setup;
+        }, timeout: new TimeSpan(0, 0, 7));
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        settings.RequestTimeout.ShouldNotBeNull();
+        settings.RequestTimeout.ShouldBe(new TimeSpan(0, 0, 7));
+    }
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+    [Fact]
+    public void create_client_with_no_timeout_when_no_option_is_configured()
+    {
+        var connectionString = @"https://localhost:9200";
 
-            registration.Name.Should().Be("my-elasticsearch");
-            check.GetType().Should().Be(typeof(ElasticsearchHealthCheck));
-        }
+        var services = new ServiceCollection();
+        var settings = new ElasticsearchOptions();
+
+        services.AddHealthChecks().AddElasticsearch(setup =>
+        {
+            setup.UseServer(connectionString);
+            settings = setup;
+        });
+
+        settings.RequestTimeout.ShouldBeNull();
+    }
+
+    [Fact]
+    public void throw_exception_when_create_client_without_using_elasic_cloud_or_server()
+    {
+        var services = new ServiceCollection();
+        var settings = new ElasticsearchOptions();
+
+        Assert.Throws<InvalidOperationException>(() => services.AddHealthChecks().AddElasticsearch(setup => settings = setup));
+    }
+
+    [Fact]
+    public void create_client_when_using_elasic_cloud()
+    {
+        var services = new ServiceCollection();
+
+        var settings = new ElasticsearchOptions();
+
+        services.AddHealthChecks().AddElasticsearch(setup =>
+        {
+            setup.UseElasticCloud("cloudId", "cloudApiKey");
+            settings = setup;
+        });
+
+        settings.AuthenticateWithElasticCloud.ShouldBeTrue();
+        settings.CloudApiKey.ShouldNotBeNull();
+        settings.CloudId.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void client_should_resolve_from_di()
+    {
+        var client = new Elastic.Clients.Elasticsearch.ElasticsearchClient();
+        var services = new ServiceCollection();
+        services.AddSingleton(client);
+
+        services.AddHealthChecks().AddElasticsearch();
+
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        check.ShouldBeOfType<ElasticsearchHealthCheck>();
+    }
+
+    [Fact]
+    public void use_client_factory()
+    {
+        var client = new Elastic.Clients.Elasticsearch.ElasticsearchClient();
+        var services = new ServiceCollection();
+        var settings = new ElasticsearchOptions();
+        var factoryCalled = false;
+
+        services.AddHealthChecks().AddElasticsearch(clientFactory: (sp =>
+        {
+            factoryCalled = true;
+            return client;
+        }));
+
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        check.ShouldBeOfType<ElasticsearchHealthCheck>();
+        factoryCalled.ShouldBeTrue();
     }
 }

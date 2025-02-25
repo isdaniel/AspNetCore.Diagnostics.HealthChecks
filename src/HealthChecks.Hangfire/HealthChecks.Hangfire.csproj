@@ -1,15 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Hangfire</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Hangfire</PackageTags>
     <Description>HealthChecks.Hangfire is the health check package for Hangfire.</Description>
-    <Version>$(HealthCheckHangfire)</Version>
+    <VersionPrefix>$(HealthCheckHangfire)</VersionPrefix>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hangfire.Core"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="Hangfire.Core" />
+    <Compile Include="../HealthCheckResultTask.cs" />
   </ItemGroup>
 
 </Project>

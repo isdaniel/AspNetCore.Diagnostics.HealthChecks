@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\HealthChecks.Prometheus.Metrics\HealthChecks.Prometheus.Metrics.csproj" />
   </ItemGroup>

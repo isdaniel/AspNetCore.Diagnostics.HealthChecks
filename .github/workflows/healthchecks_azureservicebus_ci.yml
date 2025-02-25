@@ -1,33 +1,37 @@
 name: HealthChecks AzureServiceBus DB CI
 
 on:
+  workflow_dispatch:
   push:
    branches: [ master ]
    paths:
-    - src/HealthChecks.AzureServiceBus/**
-    - test/HealthChecks.AzureServiceBus.Tests/**
-    - .github/workflows/healthchecks_azureservicebus_ci.yml
+     - src/HealthChecks.AzureServiceBus/**
+     - test/HealthChecks.AzureServiceBus.Tests/**
+     - test/_SHARED/**
+     - .github/workflows/healthchecks_azureservicebus_ci.yml
+     - .github/workflows/reusable_ci_workflow.yml
+     - Directory.Build.props
+     - Directory.Build.targets
    tags-ignore:
-    - release-*
+     - release-*
+     - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.AzureServiceBus/**
-    - test/HealthChecks.AzureServiceBus.Tests/**
-    - .github/workflows/healthchecks_azureservicebus_ci.yml
+      - src/HealthChecks.AzureServiceBus/**
+      - test/HealthChecks.AzureServiceBus.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_azureservicebus_ci.yml
+      - .github/workflows/reusable_ci_workflow.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
+
 jobs:
   build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.AzureServiceBus/HealthChecks.AzureServiceBus.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.AzureServiceBus/HealthChecks.AzureServiceBus.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.AzureServiceBus.Tests/HealthChecks.AzureServiceBus.Tests.csproj --verbosity normal
+    uses: ./.github/workflows/reusable_ci_workflow.yml
+    with:
+      PROJECT_PATH: ./src/HealthChecks.AzureServiceBus/HealthChecks.AzureServiceBus.csproj
+      TEST_PROJECT_PATH: ./test/HealthChecks.AzureServiceBus.Tests/HealthChecks.AzureServiceBus.Tests.csproj
+      CODECOV_FLAGS: AzureServiceBus

@@ -1,40 +1,36 @@
-﻿using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Xunit;
+using Microsoft.ApplicationInsights.Extensibility;
 
-namespace HealthChecks.Publisher.ApplicationInsights.Tests.DependencyInjection
+namespace HealthChecks.Publisher.ApplicationInsights.Tests.DependencyInjection;
+
+public class application_insights_publisher_registration_should
 {
-    public class application_insights_publisher_registration_should
+    [Fact]
+    public void add_healthcheck_when_properly_configured_with_connection_string_parameter()
     {
-        [Fact]
-        public void add_healthcheck_when_properly_configured_with_instrumentation_key_parameter()
-        {
-            var services = new ServiceCollection();
-            services
-                .AddHealthChecks()
-                .AddApplicationInsightsPublisher("telemetrykey");
+        var services = new ServiceCollection();
+        services
+            .AddHealthChecks()
+            .AddApplicationInsightsPublisher(connectionString: "InstrumentationKey=telemetrykey;EndpointSuffix=example.com;");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
 
-            Assert.NotNull(publisher);
-        }
+        publisher.ShouldNotBeNull();
+    }
 
-        [Fact]
-        public void add_healthcheck_when_application_insights_is_properly_configured_with_IOptions()
-        {
-            var services = new ServiceCollection();
-            services.Configure<TelemetryConfiguration>(config => config.InstrumentationKey = "telemetrykey");
+    [Fact]
+    public void add_healthcheck_when_application_insights_is_properly_configured_with_IOptions()
+    {
+        var services = new ServiceCollection();
+        services.Configure<TelemetryConfiguration>(config => config.ConnectionString = "InstrumentationKey=telemetrykey;EndpointSuffix=example.com;");
 
-            services
-                .AddHealthChecks()
-                .AddApplicationInsightsPublisher();
+        services
+            .AddHealthChecks()
+            .AddApplicationInsightsPublisher();
 
-            var serviceProvider = services.BuildServiceProvider();
-            var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
 
-            Assert.NotNull(publisher);
-        }
+        publisher.ShouldNotBeNull();
     }
 }

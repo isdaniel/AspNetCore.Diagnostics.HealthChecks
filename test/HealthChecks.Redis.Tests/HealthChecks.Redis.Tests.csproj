@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.Redis" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HealthChecks.Redis\HealthChecks.Redis.csproj" />

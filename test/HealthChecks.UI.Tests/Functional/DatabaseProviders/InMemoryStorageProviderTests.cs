@@ -1,48 +1,61 @@
-﻿using FluentAssertions;
-using HealthChecks.UI.Core.Data;
-using Microsoft.AspNetCore.TestHost;
+using HealthChecks.UI.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Xunit;
 
-namespace HealthChecks.UI.Tests
+namespace HealthChecks.UI.Tests;
+
+[Collection("execution")]
+public class inmemory_storage_should
 {
-    [Collection("execution")]
-    public class inmemory_storage_should
+    private const string ProviderName = "Microsoft.EntityFrameworkCore.InMemory";
+
+    [Fact]
+    public void register_healthchecksdb_context()
     {
+        var customOptionsInvoked = false;
 
-        [Fact(Skip ="conflicts with other tests that use inmemory storage too")]
-        public async Task seed_database_and_serve_stored_executions()
-        {
-            var hostReset = new ManualResetEventSlim(false);
-            var collectorReset = new ManualResetEventSlim(false);
+        var hostBuilder = new WebHostBuilder()
+            .UseStartup<DefaultStartup>()
+            .ConfigureServices(services =>
+            {
+                services.AddHealthChecksUI()
+                .AddInMemoryStorage(opt => customOptionsInvoked = true);
+            });
 
-            var webHostBuilder = HostBuilderHelper.Create(
-                   hostReset,
-                   collectorReset,
-                   configureUI: config => config.AddInMemoryStorage());
+        var services = hostBuilder.Build().Services;
+        var context = services.GetRequiredService<HealthChecksDb>();
 
-            using var host = new TestServer(webHostBuilder);
+        context.ShouldNotBeNull();
+        context.Database.ProviderName.ShouldBe(ProviderName);
+        customOptionsInvoked.ShouldBeTrue();
+    }
 
-            hostReset.Wait(ProviderTestHelper.DefaultHostTimeout);
+    [Fact(Skip = "conflicts with other tests that use inmemory storage too")]
+    public async Task seed_database_and_serve_stored_executions()
+    {
+        var hostReset = new ManualResetEventSlim(false);
+        var collectorReset = new ManualResetEventSlim(false);
 
-            var context = host.Services.GetRequiredService<HealthChecksDb>();
-            var configurations = await context.Configurations.ToListAsync();
-            var host1 = ProviderTestHelper.Endpoints[0];
+        var webHostBuilder = HostBuilderHelper.Create(
+               hostReset,
+               collectorReset,
+               configureUI: config => config.AddInMemoryStorage());
 
-            configurations[0].Name.Should().Be(host1.Name);
-            configurations[0].Uri.Should().Be(host1.Uri);
+        using var host = new TestServer(webHostBuilder);
 
-            using var client = host.CreateClient();
+        hostReset.Wait(ProviderTestHelper.DefaultHostTimeout);
 
-            collectorReset.Wait(ProviderTestHelper.DefaultCollectorTimeout);
+        var context = host.Services.GetRequiredService<HealthChecksDb>();
+        var configurations = await context.Configurations.ToListAsync();
+        var host1 = ProviderTestHelper.Endpoints[0];
 
-            var report = await client.GetAsJson<List<HealthCheckExecution>>("/healthchecks-api");
-            report.First().Name.Should().Be(host1.Name);
-        }
+        configurations[0].Name.ShouldBe(host1.Name);
+        configurations[0].Uri.ShouldBe(host1.Uri);
+
+        using var client = host.CreateClient();
+
+        collectorReset.Wait(ProviderTestHelper.DefaultCollectorTimeout);
+
+        var report = await client.GetAsJson<List<HealthCheckExecution>>("/healthchecks-api");
+        report.First().Name.ShouldBe(host1.Name);
     }
 }

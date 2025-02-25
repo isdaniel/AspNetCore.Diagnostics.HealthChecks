@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>HealthCheck;Health;InfluxDB</PackageTags>
+    <Description>HealthChecks.InfluxDB is the health check package for InfluxDB.</Description>
+    <VersionPrefix>$(HealthCheckInfluxDB)</VersionPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="InfluxDB.Client" />
+    <Compile Include="../HealthCheckResultTask.cs" />
+  </ItemGroup>
+
+</Project>

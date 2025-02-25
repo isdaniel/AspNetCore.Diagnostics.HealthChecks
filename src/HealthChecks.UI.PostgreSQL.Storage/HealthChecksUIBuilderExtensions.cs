@@ -1,20 +1,27 @@
-﻿using HealthChecks.UI.Core.Data;
+using HealthChecks.UI.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+public static class HealthChecksUIBuilderExtensions
 {
-    public static class HealthChecksUIBuilderExtensions
+    public static HealthChecksUIBuilder AddPostgreSqlStorage(
+        this HealthChecksUIBuilder builder,
+        string connectionString,
+        Action<DbContextOptionsBuilder>? configureOptions = null,
+        Action<NpgsqlDbContextOptionsBuilder>? configurePostgreOptions = null)
     {
-        public static HealthChecksUIBuilder AddPostgreSqlStorage(this HealthChecksUIBuilder builder, string connectionString, Action<DbContextOptionsBuilder> configureOptions = null)
+        builder.Services.AddDbContext<HealthChecksDb>(optionsBuilder =>
         {
-            builder.Services.AddDbContext<HealthChecksDb>(options =>
+            configureOptions?.Invoke(optionsBuilder);
+            optionsBuilder.UseNpgsql(connectionString, npgsqlOptionsBuilder =>
             {
-                configureOptions?.Invoke(options);
-                options.UseNpgsql(connectionString, o => o.MigrationsAssembly("HealthChecks.UI.PostgreSQL.Storage"));
+                npgsqlOptionsBuilder.MigrationsAssembly("HealthChecks.UI.PostgreSQL.Storage");
+                configurePostgreOptions?.Invoke(npgsqlOptionsBuilder);
             });
+        });
 
-            return builder;
-        }
+        return builder;
     }
 }

@@ -1,39 +1,53 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MySqlConnector;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace HealthChecks.MySql
+namespace HealthChecks.MySql;
+
+/// <summary>
+/// A health check for MySQL databases.
+/// </summary>
+public class MySqlHealthCheck : IHealthCheck
 {
-    public class MySqlHealthCheck
-        : IHealthCheck
+    private readonly MySqlHealthCheckOptions _options;
+
+    public MySqlHealthCheck(MySqlHealthCheckOptions options)
     {
-        private readonly string _connectionString;
-        public MySqlHealthCheck(string connectionString)
+        _options = Guard.ThrowIfNull(options);
+    }
+
+    /// <inheritdoc />
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            using var connection = _options.DataSource is not null ?
+                _options.DataSource.CreateConnection() :
+                new MySqlConnection(_options.ConnectionString);
+
+            _options.Configure?.Invoke(connection);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+            if (_options.CommandText is { } commandText)
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = _options.CommandText;
+                object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+
+                return _options.HealthCheckResultBuilder == null
+                    ? HealthCheckResult.Healthy()
+                    : _options.HealthCheckResultBuilder(result);
+            }
+            else
+            {
+                var success = await connection.PingAsync(cancellationToken).ConfigureAwait(false);
+                return _options.HealthCheckResultBuilder is null
+                    ? (success ? HealthCheckResult.Healthy() : new HealthCheckResult(context.Registration.FailureStatus)) :
+                    _options.HealthCheckResultBuilder(success);
+            }
         }
-        public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+        catch (Exception ex)
         {
-            try
-            {
-                using (var connection = new MySqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync(cancellationToken);
-
-                    if (!await connection.PingAsync(cancellationToken))
-                    {
-                        return new HealthCheckResult(context.Registration.FailureStatus, description: $"The {nameof(MySqlHealthCheck)} check fail.");
-                    }
-
-                    return HealthCheckResult.Healthy();
-                }
-            }
-            catch (Exception ex)
-            {
-                return new HealthCheckResult(context.Registration.FailureStatus, exception: ex);
-            }
+            return new HealthCheckResult(context.Registration.FailureStatus, exception: ex);
         }
     }
 }

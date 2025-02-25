@@ -1,39 +1,36 @@
-﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace HealthChecks.UI.Core
+namespace HealthChecks.UI.Core;
+
+internal class ServerAddressesService
 {
-    internal class ServerAddressesService
+    private readonly IServer _server;
+
+    public ServerAddressesService(IServer server)
     {
-        private readonly IServer _server;
+        _server = server;
+    }
 
-        public ServerAddressesService(IServer server)
+    internal ICollection<string>? Addresses => AddressesFeature?.Addresses;
+
+    private IServerAddressesFeature? AddressesFeature =>
+        _server.Features.Get<IServerAddressesFeature>();
+
+    internal string AbsoluteUriFromRelative(string relativeUrl)
+    {
+        var targetAddress = Addresses!.First();
+
+        if (targetAddress.EndsWith("/"))
         {
-            _server = server;
+            targetAddress = targetAddress[0..^1];
         }
 
-        internal ICollection<string> Addresses => AddressesFeature.Addresses;
-
-        private IServerAddressesFeature AddressesFeature =>
-            _server.Features.Get<IServerAddressesFeature>();
-
-        internal string AbsoluteUriFromRelative(string relativeUrl)
+        if (!relativeUrl.StartsWith("/"))
         {
-            var targetAddress = AddressesFeature.Addresses.First();
-
-            if (targetAddress.EndsWith("/"))
-            {
-                targetAddress = targetAddress[0..^1];
-            }
-
-            if (!relativeUrl.StartsWith("/"))
-            {
-                relativeUrl = $"/{relativeUrl}";
-            }
-
-            return $"{targetAddress}{relativeUrl}";
+            relativeUrl = $"/{relativeUrl}";
         }
+
+        return $"{targetAddress}{relativeUrl}";
     }
 }

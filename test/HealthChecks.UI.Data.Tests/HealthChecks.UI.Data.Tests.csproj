@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <ProjectReference Include="..\..\src\HealthChecks.UI.Data\HealthChecks.UI.Data.csproj" />
+  </ItemGroup>
+
+</Project>

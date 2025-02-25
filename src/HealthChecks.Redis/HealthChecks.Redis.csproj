@@ -1,15 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Health;Redis</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Redis</PackageTags>
     <Description>HealthChecks.Redis is the health check package for Redis.</Description>
-    <Version>$(HealthCheckRedis)</Version>
+    <VersionPrefix>$(HealthCheckRedis)</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="StackExchange.Redis"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="StackExchange.Redis" />
   </ItemGroup>
 
 </Project>

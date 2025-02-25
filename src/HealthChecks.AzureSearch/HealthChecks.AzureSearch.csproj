@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Azure;Search</PackageTags>
+    <Description>HealthChecks.AzureSearch is the health check package for Azure Search.</Description>
+    <VersionPrefix>$(HealthCheckAzureSearch)</VersionPrefix>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Search.Documents" />
+  </ItemGroup>
+
+</Project>

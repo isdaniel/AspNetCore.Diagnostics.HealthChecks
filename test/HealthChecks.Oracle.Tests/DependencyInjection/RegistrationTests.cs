@@ -1,47 +1,55 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-using System.Linq;
-using Xunit;
+namespace HealthChecks.Oracle.Tests.DependencyInjection;
 
-namespace HealthChecks.Oracle.Tests.DependencyInjection
+public class oracle_registration_should
 {
-    public class oracle_registration_should
+    [Fact]
+    public void add_health_check_when_properly_configured()
     {
-        [Fact]
-        public void add_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddOracle("connectionstring");
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddOracle("connectionstring");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            registration.Name.Should().Be("oracle");
-            check.GetType().Should().Be(typeof(OracleHealthCheck));
+        registration.Name.ShouldBe("oracle");
+        check.ShouldBeOfType<OracleHealthCheck>();
+    }
 
-        }
+    [Fact]
+    public void add_named_health_check_when_properly_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddOracle("connectionstring", name: "my-oracle-1");
 
-        [Fact]
-        public void add_named_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddOracle("connectionstring", name: "my-oracle-1");
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        registration.Name.ShouldBe("my-oracle-1");
+        check.ShouldBeOfType<OracleHealthCheck>();
+    }
 
-            registration.Name.Should().Be("my-oracle-1");
-            check.GetType().Should().Be(typeof(OracleHealthCheck));
-        }
+    [Fact]
+    public void add_health_check_with_connection_string_factory_when_properly_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddOracle(_ => "connectionstring");
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("oracle");
+        check.ShouldBeOfType<OracleHealthCheck>();
     }
 }

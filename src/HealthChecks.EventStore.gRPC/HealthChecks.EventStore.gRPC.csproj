@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(DefaultNetCoreApp)</TargetFramework>
+    <PackageTags>$(PackageTags);EventStore;gRPC</PackageTags>
+    <Description>HealthChecks.EventStore.gRPC is the health check package for EventStore, using the gRPC client.</Description>
+    <VersionPrefix>$(HealthCheckEventStoregRPC)</VersionPrefix>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EventStore.Client.Grpc.Streams" />
+  </ItemGroup>
+
+</Project>

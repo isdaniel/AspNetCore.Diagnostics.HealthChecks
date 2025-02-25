@@ -1,97 +1,42 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RabbitMQ.Client;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace HealthChecks.RabbitMQ
+namespace HealthChecks.RabbitMQ;
+
+/// <summary>
+/// A health check for RabbitMQ services.
+/// </summary>
+public class RabbitMQHealthCheck : IHealthCheck
 {
-    public class RabbitMQHealthCheck
-        : IHealthCheck, IDisposable
+    private readonly IConnection? _connection;
+    private readonly IServiceProvider? _serviceProvider;
+    private readonly Func<IServiceProvider, Task<IConnection>>? _factory;
+
+    public RabbitMQHealthCheck(IConnection connection)
     {
-        private IConnection? _connection;
-        private IConnectionFactory? _factory;
-        private readonly Uri? _rabbitConnectionString;
-        private readonly SslOption? _sslOption;
-        private readonly bool _ownsConnection;
-        private bool _disposed;
+        _connection = Guard.ThrowIfNull(connection);
+    }
 
-        public RabbitMQHealthCheck(IConnection connection)
+    public RabbitMQHealthCheck(IServiceProvider serviceProvider, Func<IServiceProvider, Task<IConnection>> factory)
+    {
+        _serviceProvider = Guard.ThrowIfNull(serviceProvider);
+        _factory = Guard.ThrowIfNull(factory);
+    }
+
+    /// <inheritdoc />
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
         {
-            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            var connection = _connection ?? await _factory!(_serviceProvider!).ConfigureAwait(false);
+
+            await using var model = await connection.CreateChannelAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return HealthCheckResult.Healthy();
         }
-
-        public RabbitMQHealthCheck(IConnectionFactory factory)
+        catch (Exception ex)
         {
-            _factory = factory ?? throw new ArgumentNullException(nameof(factory));
-            _ownsConnection = true;
-        }
-
-        public RabbitMQHealthCheck(Uri rabbitConnectionString, SslOption? ssl)
-        {
-            _rabbitConnectionString = rabbitConnectionString;
-            _sslOption = ssl;
-            _ownsConnection = true;
-        }
-
-        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                using var model = EnsureConnection().CreateModel();
-                return Task.FromResult(HealthCheckResult.Healthy());
-            }
-            catch (Exception ex)
-            {
-                return Task.FromResult(
-                    new HealthCheckResult(context.Registration.FailureStatus, exception: ex));
-            }
-        }
-
-        private IConnection EnsureConnection()
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(RabbitMQHealthCheck));
-
-            if (_connection == null)
-            {
-                if (_factory == null)
-                {
-                    _factory = new ConnectionFactory()
-                    {
-                        Uri = _rabbitConnectionString,
-                        AutomaticRecoveryEnabled = true,
-                        UseBackgroundThreadsForIO = true,
-                    };
-
-                    if (_sslOption != null)
-                        ((ConnectionFactory)_factory).Ssl = _sslOption;
-                }
-
-                _connection = _factory.CreateConnection();
-            }
-
-            return _connection;
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                // dispose connection only if RabbitMQHealthCheck owns it
-                if (!_disposed && _connection != null && _ownsConnection)
-                {
-                    _connection.Dispose();
-                    _connection = null;
-                }
-                _disposed = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            return new HealthCheckResult(context.Registration.FailureStatus, exception: ex);
         }
     }
 }

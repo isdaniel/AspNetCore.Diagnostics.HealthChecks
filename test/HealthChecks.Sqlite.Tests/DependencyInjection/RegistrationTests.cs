@@ -1,46 +1,38 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-using System.Linq;
-using Xunit;
+namespace HealthChecks.Sqlite.Tests.DependencyInjection;
 
-namespace HealthChecks.Sqlite.Tests.DependencyInjection
+public class uris_registration_should
 {
-    public class uris_registration_should
+    [Fact]
+    public void add_health_check_when_properly_configured()
     {
-        [Fact]
-        public void add_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddSqlite("connectionstring");
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddSqlite("connectionstring");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            registration.Name.Should().Be("sqlite");
-            check.GetType().Should().Be(typeof(SqliteHealthCheck));
-        }
+        registration.Name.ShouldBe("sqlite");
+        check.ShouldBeOfType<SqliteHealthCheck>();
+    }
 
-        [Fact]
-        public void add_named_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddSqlite("connectionstring", name: "my-sqlite");
+    [Fact]
+    public void add_named_health_check_when_properly_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddSqlite("connectionstring", name: "my-sqlite");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            registration.Name.Should().Be("my-sqlite");
-            check.GetType().Should().Be(typeof(SqliteHealthCheck));
-        }
+        registration.Name.ShouldBe("my-sqlite");
+        check.ShouldBeOfType<SqliteHealthCheck>();
     }
 }

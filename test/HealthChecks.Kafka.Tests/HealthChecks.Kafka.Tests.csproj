@@ -1,11 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\HealthChecks.Kafka\HealthChecks.Kafka.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.Kafka" />
+  </ItemGroup>
 </Project>

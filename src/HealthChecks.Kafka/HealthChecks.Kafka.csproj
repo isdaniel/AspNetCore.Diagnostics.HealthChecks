@@ -1,15 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Health;Kafka;Confluent</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Kafka;Confluent</PackageTags>
     <Description>HealthChecks.Kafka is the health check package for Kafka.</Description>
-    <Version>$(HealthCheckKafka)</Version>
+    <VersionPrefix>$(HealthCheckKafka)</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>
+    <PackageReference Include="Confluent.Kafka" />
   </ItemGroup>
 
 </Project>

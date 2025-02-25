@@ -1,86 +1,79 @@
 using k8s.Models;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace HealthChecks.Kubernetes
+namespace HealthChecks.Kubernetes;
+
+internal static class KubernetesChecksExecutor
 {
-    public class KubernetesChecksExecutor
+    private static readonly Dictionary<Type, Func<k8s.Kubernetes, KubernetesResourceCheck, CancellationToken, Task<(bool, string)>>> _handlers = new()
     {
-        private readonly k8s.Kubernetes _client;
-        private readonly Dictionary<Type, Func<KubernetesResourceCheck, CancellationToken, Task<(bool, string)>>> _handlers;
-        public KubernetesChecksExecutor(k8s.Kubernetes client)
+        [typeof(V1Deployment)] = CheckDeploymentAsync,
+        [typeof(V1Service)] = CheckServiceAsync,
+        [typeof(V1Pod)] = CheckPodAsync
+    };
+
+    public static Task<(bool, string)> CheckAsync(k8s.Kubernetes client, KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+    {
+        var handler = _handlers[resourceCheck.ResourceType];
+        return handler?.Invoke(client, resourceCheck, cancellationToken) ??
+               throw new InvalidOperationException(
+                   $"No handler registered for type {resourceCheck.ResourceType.Name}");
+    }
+
+    private static async Task<(bool, string)> CheckDeploymentAsync(k8s.Kubernetes client, KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+    {
+        var tsc = new TaskCompletionSource<(bool, string)>();
+
+        try
         {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
-            _handlers = new Dictionary<Type, Func<KubernetesResourceCheck, CancellationToken, Task<(bool, string)>>>()
-            {
-                [typeof(V1Deployment)] = CheckDeploymentAsync,
-                [typeof(V1Service)] = CheckServiceAsync,
-                [typeof(V1Pod)] = CheckPodAsync
-            };
+            using var result = await client.AppsV1.ReadNamespacedDeploymentStatusWithHttpMessagesAsync(resourceCheck.Name,
+                resourceCheck.Namespace, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
         }
-        public Task<(bool, string)> CheckAsync(KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            var handler = _handlers[resourceCheck.ResourceType];
-            return handler?.Invoke(resourceCheck, cancellationToken) ??
-                   throw new InvalidOperationException(
-                       $"No handler registered for type {resourceCheck.ResourceType.Name}");
+            tsc.SetException(
+                new Exception($"The Deployment {resourceCheck.Name} failed with error: {ex.Message}"));
         }
-        private async Task<(bool, string)> CheckDeploymentAsync(KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+
+        return await tsc.Task.ConfigureAwait(false);
+    }
+
+    private static async Task<(bool, string)> CheckPodAsync(k8s.Kubernetes client, KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+    {
+        var tsc = new TaskCompletionSource<(bool, string)>();
+        try
         {
-            var tsc = new TaskCompletionSource<(bool, string)>();
+            using var result = await client.CoreV1.ReadNamespacedPodStatusWithHttpMessagesAsync(resourceCheck.Name,
+                resourceCheck.Namespace, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            try
-            {
-                var result = await _client.ReadNamespacedDeploymentStatusWithHttpMessagesAsync(resourceCheck.Name,
-                    resourceCheck.Namespace, cancellationToken: cancellationToken);
-
-                tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
-            }
-            catch (Exception ex)
-            {
-                tsc.SetException(
-                    new Exception($"The Deployment {resourceCheck.Name} failed with error: {ex.Message}"));
-            }
-
-            return await tsc.Task;
+            tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
         }
-        private async Task<(bool, string)> CheckPodAsync(KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            var tsc = new TaskCompletionSource<(bool, string)>();
-            try
-            {
-                var result = await _client.ReadNamespacedPodStatusWithHttpMessagesAsync(resourceCheck.Name,
-                    resourceCheck.Namespace, cancellationToken: cancellationToken);
-
-                tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
-            }
-            catch (Exception ex)
-            {
-                tsc.SetException(
-                    new Exception($"The pod {resourceCheck.Name} failed with error: {ex.Message}"));
-            }
-
-            return await tsc.Task;
+            tsc.SetException(
+                new Exception($"The pod {resourceCheck.Name} failed with error: {ex.Message}"));
         }
-        private async Task<(bool, string)> CheckServiceAsync(KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+
+        return await tsc.Task.ConfigureAwait(false);
+    }
+
+    private static async Task<(bool, string)> CheckServiceAsync(k8s.Kubernetes client, KubernetesResourceCheck resourceCheck, CancellationToken cancellationToken)
+    {
+        var tsc = new TaskCompletionSource<(bool, string)>();
+        try
         {
-            var tsc = new TaskCompletionSource<(bool, string)>();
-            try
-            {
-                var result = await _client.ReadNamespacedServiceStatusWithHttpMessagesAsync(resourceCheck.Name,
-                    resourceCheck.Namespace, cancellationToken: cancellationToken);
+            using var result = await client.CoreV1.ReadNamespacedServiceStatusWithHttpMessagesAsync(resourceCheck.Name,
+                resourceCheck.Namespace, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
-            }
-            catch (Exception ex)
-            {
-                tsc.SetException(
-                    new Exception($"The service {resourceCheck.Name} failed with error: {ex.Message}"));
-            }
-
-            return await tsc.Task;
+            tsc.SetResult((resourceCheck.Check(result.Body), resourceCheck.Name));
         }
+        catch (Exception ex)
+        {
+            tsc.SetException(
+                new Exception($"The service {resourceCheck.Name} failed with error: {ex.Message}"));
+        }
+
+        return await tsc.Task.ConfigureAwait(false);
     }
 }

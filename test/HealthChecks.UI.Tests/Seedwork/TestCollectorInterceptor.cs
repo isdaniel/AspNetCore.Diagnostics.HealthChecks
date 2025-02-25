@@ -1,29 +1,22 @@
-﻿using HealthChecks.UI.Core;
-using HealthChecks.UI.Core.Data;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using HealthChecks.UI.Core;
+using HealthChecks.UI.Data;
 
-namespace HealthChecks.UI.Tests
+namespace HealthChecks.UI.Tests;
+
+internal class TestCollectorInterceptor : IHealthCheckCollectorInterceptor
 {
-    internal class TestCollectorInterceptor : IHealthCheckCollectorInterceptor
+    private readonly ManualResetEventSlim _resetEvent;
+
+    public TestCollectorInterceptor(ManualResetEventSlim resetEvent)
     {
-        private readonly ManualResetEventSlim _resetEvent;
-
-        public TestCollectorInterceptor(ManualResetEventSlim resetEvent)
-        {
-            _resetEvent = resetEvent ?? throw new ArgumentNullException(nameof(resetEvent));
-        }
-
-        public ValueTask OnCollectExecuted(UIHealthReport report)
-        {
-            _resetEvent.Set();
-            return new ValueTask();
-        }
-
-        public ValueTask OnCollectExecuting(HealthCheckConfiguration healthCheck)
-        {
-            return new ValueTask();
-        }
+        _resetEvent = Guard.ThrowIfNull(resetEvent);
     }
+
+    public ValueTask OnCollectExecuted(UIHealthReport report)
+    {
+        _resetEvent.Set();
+        return default;
+    }
+
+    public ValueTask OnCollectExecuting(HealthCheckConfiguration healthCheck) => default;
 }

@@ -1,16 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Azure;CosmosDb</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Azure;CosmosDb</PackageTags>
     <Description>HealthChecks.CosmosDb is the health check package for Azure CosmosDb.</Description>
-    <Version>$(HealthCheckCosmosDb)</Version>
+    <VersionPrefix>$(HealthCheckCosmosDb)</VersionPrefix>
+    <!-- Microsoft.Azure.Cosmos requires the app to install Newtonsoft.Json, we just disable that check here -->
+    <AzureCosmosDisableNewtonsoftJsonCheck>true</AzureCosmosDisableNewtonsoftJsonCheck>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>
-    <PackageReference Include="Azure.Data.Tables"/>
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
   </ItemGroup>
 
 </Project>

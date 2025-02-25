@@ -1,17 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Health;RabbitMQ</PackageTags>
-    <Description>HealthChecks.RabbitMQ is the health check package for RabbitMQ.</Description>
-    <Version>$(HealthCheckRabbitMQ)</Version>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);RabbitMQ</PackageTags>
+    <Description>HealthChecks.RabbitMQ is the health check package for RabbitMQ.Client.</Description>
+    <VersionPrefix>$(HealthCheckRabbitMQ)</VersionPrefix>
     <RootNamespace>HealthChecks.RabbitMQ</RootNamespace> <!--For backward naming compatibility-->
-	<Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RabbitMQ.Client"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>
+    <PackageReference Include="RabbitMQ.Client" />
   </ItemGroup>
 
 </Project>

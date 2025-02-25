@@ -1,184 +1,202 @@
-﻿using FluentAssertions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
 using System.Net;
-using System.Threading.Tasks;
-using Xunit;
+using MongoDB.Driver;
 
+namespace HealthChecks.MongoDb.Tests.Functional;
 
-namespace HealthChecks.MongoDb.Tests.Functional
+public class mongodb_healthcheck_should(MongoDbContainerFixture mongoDbContainerFixture) : IClassFixture<MongoDbContainerFixture>
 {
-    public class mongodb_healthcheck_should
+    [Fact]
+    public async Task be_healthy_listing_all_databases_if_mongodb_is_available()
     {
-        [Fact]
-        public async Task be_healthy_listing_all_databases_if_mongodb_is_available()
-        {
-            var connectionString = @"mongodb://localhost:27017";
+        var connectionString = mongoDbContainerFixture.GetConnectionString();
 
-            var webHostBuilder = new WebHostBuilder()
-                .UseStartup<DefaultStartup>()
-                .ConfigureServices(services =>
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient(connectionString))
+                    .AddHealthChecks()
+                    .AddMongoDb(tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
                 {
-                    services.AddHealthChecks()
-                    .AddMongoDb(connectionString, tags: new string[] { "mongodb" });
-                })
-                .Configure(app =>
-                {
-                    app.UseHealthChecks("/health", new HealthCheckOptions()
-                    {
-                        Predicate = r => r.Tags.Contains("mongodb")
-                    });
+                    Predicate = r => r.Tags.Contains("mongodb")
                 });
+            });
 
-            var server = new TestServer(webHostBuilder);
+        using var server = new TestServer(webHostBuilder);
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var response = await server.CreateRequest("/health").GetAsync();
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.OK);
-        }
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
 
-        [Fact]
-        public async Task be_healthy_on_specified_database_if_mongodb_is_available_and_database_exist()
-        {
-            var connectionString = @"mongodb://localhost:27017";
+    [Fact]
+    public async Task be_healthy_on_specified_database_if_mongodb_is_available_and_database_exist()
+    {
+        var connectionString = mongoDbContainerFixture.GetConnectionString();
 
-            var webHostBuilder = new WebHostBuilder()
-                .UseStartup<DefaultStartup>()
-                .ConfigureServices(services =>
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient(connectionString))
+                    .AddHealthChecks()
+                    .AddMongoDb(databaseNameFactory: _ => "local", tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
                 {
-                    services.AddHealthChecks()
-                    .AddMongoDb(connectionString, mongoDatabaseName: "local", tags: new string[] { "mongodb" });
-                })
-                .Configure(app =>
-                {
-                    app.UseHealthChecks("/health", new HealthCheckOptions()
-                    {
-                        Predicate = r => r.Tags.Contains("mongodb")
-                    });
+                    Predicate = r => r.Tags.Contains("mongodb")
                 });
+            });
 
-            var server = new TestServer(webHostBuilder);
+        using var server = new TestServer(webHostBuilder);
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var response = await server.CreateRequest("/health").GetAsync();
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.OK);
-        }
-        [Fact]
-        public async Task be_healthy_on_connectionstring_specified_database_if_mongodb_is_available_and_database_exist()
-        {
-            var connectionString = @"mongodb://localhost:27017/local";
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
 
-            var webHostBuilder = new WebHostBuilder()
-                .UseStartup<DefaultStartup>()
-                .ConfigureServices(services =>
+    [Fact]
+    public async Task be_healthy_on_connectionstring_specified_database_if_mongodb_is_available_and_database_exist()
+    {
+        var connectionString = $"{mongoDbContainerFixture.GetConnectionString()}local";
+
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient(connectionString))
+                    .AddHealthChecks()
+                    .AddMongoDb(tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
                 {
-                    services.AddHealthChecks()
-                    .AddMongoDb(connectionString, tags: new string[] { "mongodb" });
-                })
-                .Configure(app =>
-                {
-                    app.UseHealthChecks("/health", new HealthCheckOptions()
-                    {
-                        Predicate = r => r.Tags.Contains("mongodb")
-                    });
+                    Predicate = r => r.Tags.Contains("mongodb")
                 });
+            });
 
-            var server = new TestServer(webHostBuilder);
+        using var server = new TestServer(webHostBuilder);
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var response = await server.CreateRequest("/health").GetAsync();
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.OK);
-        }
-        [Fact]
-        public async Task be_unhealthy_on_connectionstring_specified_database_if_mongodb_is_available_and_database_exist()
-        {
-            var connectionString = @"mongodb://localhost:27017/nonexisting";
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
 
-            var webHostBuilder = new WebHostBuilder()
-                .UseStartup<DefaultStartup>()
-                .ConfigureServices(services =>
+    [Fact]
+    public async Task be_healthy_on_connectionstring_specified_database_if_mongodb_is_available_and_database_exist_dbFactory()
+    {
+        var connectionString = mongoDbContainerFixture.GetConnectionString();
+
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient(connectionString).GetDatabase("namedDb"))
+                    .AddHealthChecks()
+                    .AddMongoDb(dbFactory: sp => sp.GetRequiredService<IMongoDatabase>(), tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
                 {
-                    services.AddHealthChecks()
-                    .AddMongoDb(connectionString, tags: new string[] { "mongodb" });
-                })
-                .Configure(app =>
-                {
-                    app.UseHealthChecks("/health", new HealthCheckOptions()
-                    {
-                        Predicate = r => r.Tags.Contains("mongodb")
-                    });
+                    Predicate = r => r.Tags.Contains("mongodb")
                 });
+            });
 
-            var server = new TestServer(webHostBuilder);
+        using var server = new TestServer(webHostBuilder);
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var response = await server.CreateRequest("/health").GetAsync();
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.ServiceUnavailable);
-        }
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
 
-        [Fact]
-        public async Task be_unhealthy_listing_all_databases_if_mongodb_is_not_available()
-        {
-            var webHostBuilder = new WebHostBuilder()
-               .UseStartup<DefaultStartup>()
-               .ConfigureServices(services =>
-               {
-                   services.AddHealthChecks()
-                   .AddMongoDb("mongodb://nonexistingdomain:27017", tags: new string[] { "mongodb" });
-               })
-               .Configure(app =>
-               {
-                   app.UseHealthChecks("/health", new HealthCheckOptions()
-                   {
-                       Predicate = r => r.Tags.Contains("mongodb")
-                   });
-               });
+    [Fact]
+    public async Task be_healthy_on_connectionstring_specified_database_if_mongodb_is_available_and_database_not_exist()
+    {
+        // NOTE: with mongodb the database is created automatically the first time something is written to it
+        var connectionString = $"{mongoDbContainerFixture.GetConnectionString()}nonexisting";
 
-            var server = new TestServer(webHostBuilder);
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient(connectionString))
+                    .AddHealthChecks()
+                    .AddMongoDb(tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
+                {
+                    Predicate = r => r.Tags.Contains("mongodb")
+                });
+            });
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var server = new TestServer(webHostBuilder);
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.ServiceUnavailable);
-        }
+        using var response = await server.CreateRequest("/health").GetAsync();
 
-        [Fact]
-        public async Task be_unhealthy_on_specified_database_if_mongodb_is_not_available()
-        {
-            var webHostBuilder = new WebHostBuilder()
-               .UseStartup<DefaultStartup>()
-               .ConfigureServices(services =>
-               {
-                   services.AddHealthChecks()
-                   .AddMongoDb("mongodb://nonexistingdomain:27017", tags: new string[] { "mongodb" });
-               })
-               .Configure(app =>
-               {
-                   app.UseHealthChecks("/health", new HealthCheckOptions()
-                   {
-                       Predicate = r => r.Tags.Contains("mongodb")
-                   });
-               });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
 
-            var server = new TestServer(webHostBuilder);
+    [Fact]
+    public async Task be_unhealthy_listing_all_databases_if_mongodb_is_not_available()
+    {
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient("mongodb://nonexistingdomain:27017"))
+                    .AddHealthChecks()
+                    .AddMongoDb(tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
+                {
+                    Predicate = r => r.Tags.Contains("mongodb")
+                });
+            });
 
-            var response = await server.CreateRequest("/health")
-                .GetAsync();
+        using var server = new TestServer(webHostBuilder);
 
-            response.StatusCode
-                .Should().Be(HttpStatusCode.ServiceUnavailable);
-        }
+        using var response = await server.CreateRequest("/health").GetAsync();
+
+        response.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("nonexistingdatabase")]
+    public async Task be_unhealthy_on_specified_database_if_mongodb_is_not_available(string mongoDatabaseName)
+    {
+        var webHostBuilder = new WebHostBuilder()
+            .ConfigureServices(services =>
+            {
+                services
+                    .AddSingleton(sp => new MongoClient("mongodb://nonexistingdomain:27017"))
+                    .AddHealthChecks()
+                    .AddMongoDb(databaseNameFactory: _ => mongoDatabaseName, tags: ["mongodb"]);
+            })
+            .Configure(app =>
+            {
+                app.UseHealthChecks("/health", new HealthCheckOptions
+                {
+                    Predicate = r => r.Tags.Contains("mongodb")
+                });
+            });
+
+        using var server = new TestServer(webHostBuilder);
+
+        using var response = await server.CreateRequest("/health").GetAsync();
+
+        response.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }
 }

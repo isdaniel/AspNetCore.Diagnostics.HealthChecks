@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;IbmMQ</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);IbmMQ</PackageTags>
     <Description>HealthChecks.IbmMQ is the health check package for IbmMQ.</Description>
-    <Version>$(HealthCheckIbmMQ)</Version>
+    <VersionPrefix>$(HealthCheckIbmMQ)</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="IBMMQDotnetClient"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
+    <PackageReference Include="IBMMQDotnetClient" />
+    <Compile Include="../HealthCheckResultTask.cs" />
   </ItemGroup>
 
 </Project>

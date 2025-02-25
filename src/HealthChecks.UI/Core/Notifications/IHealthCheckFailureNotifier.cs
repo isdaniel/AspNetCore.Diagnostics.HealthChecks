@@ -1,10 +1,7 @@
-﻿using System.Threading.Tasks;
+namespace HealthChecks.UI.Core.Notifications;
 
-namespace HealthChecks.UI.Core.Notifications
+public interface IHealthCheckFailureNotifier
 {
-    interface IHealthCheckFailureNotifier
-    {
-        Task NotifyDown(string name, UIHealthReport report);
-        Task NotifyWakeUp(string name);
-    }
+    Task NotifyDown(string name, UIHealthReport report);
+    Task NotifyWakeUp(string name);
 }

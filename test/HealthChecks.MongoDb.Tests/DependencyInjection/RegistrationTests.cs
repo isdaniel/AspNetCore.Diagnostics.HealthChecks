@@ -1,78 +1,89 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using System.Linq;
-using Xunit;
 
-namespace HealthChecks.MongoDb.Tests.DependencyInjection
+namespace HealthChecks.MongoDb.Tests.DependencyInjection;
+
+public class mongodb_registration_should
 {
-    public class mongodb_registration_should
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void add_health_check_when_properly_configured_mongoClientFactory_defaults(bool registerAsAbstraction)
     {
-        [Fact]
-        public void add_health_check_when_properly_configured_connectionString()
+        var services = new ServiceCollection();
+
+        if (registerAsAbstraction)
         {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddMongoDb("mongodb://connectionstring");
-
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
-
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
-
-            registration.Name.Should().Be("mongodb");
-            check.GetType().Should().Be(typeof(MongoDbHealthCheck));
+            services.AddSingleton(sp => new MongoClient(MongoUrl.Create("mongodb://connectionstring")));
         }
-        [Fact]
-        public void add_health_check_when_properly_configured_mongoClientSettings()
+        else
         {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddMongoDb(MongoClientSettings.FromUrl(MongoUrl.Create("mongodb://connectionstring")));
-
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
-
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
-
-            registration.Name.Should().Be("mongodb");
-            check.GetType().Should().Be(typeof(MongoDbHealthCheck));
+            services.AddSingleton<IMongoClient>(sp => new MongoClient(MongoUrl.Create("mongodb://connectionstring")));
         }
-        [Fact]
-        public void add_named_health_check_when_properly_configured_connectionString()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddMongoDb("mongodb://connectionstring", name: "my-mongodb-group");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        services.AddHealthChecks()
+            .AddMongoDb(); // use default arguments and get the client resolved from the container
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            registration.Name.Should().Be("my-mongodb-group");
-            check.GetType().Should().Be(typeof(MongoDbHealthCheck));
-        }
-        [Fact]
-        public void add_named_health_check_when_properly_configured_mongoClientSettings()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddMongoDb(MongoClientSettings.FromUrl(MongoUrl.Create("mongodb://connectionstring")), name: "my-mongodb-group");
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        registration.Name.ShouldBe("mongodb");
+        check.ShouldBeOfType<MongoDbHealthCheck>();
+    }
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+    [Fact]
+    public void add_health_check_when_properly_configured_mongoClientFactory_custom()
+    {
+        var services = new ServiceCollection();
 
-            registration.Name.Should().Be("my-mongodb-group");
-            check.GetType().Should().Be(typeof(MongoDbHealthCheck));
-        }
+        services
+            .AddSingleton(MongoClientSettings.FromUrl(MongoUrl.Create("mongodb://connectionstring")))
+            .AddHealthChecks()
+            .AddMongoDb(sp => new MongoClient(sp.GetRequiredService<MongoClientSettings>()));
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("mongodb");
+        check.ShouldBeOfType<MongoDbHealthCheck>();
+    }
+
+    [Fact]
+    public void add_health_check_when_properly_configured_mongoDatabaseNameFactory_custom()
+    {
+        bool called = false;
+        var services = new ServiceCollection();
+
+        services
+            .AddSingleton(sp => new MongoClient(MongoUrl.Create("mongodb://connectionstring")))
+            .AddHealthChecks()
+            .AddMongoDb(databaseNameFactory: _ => { called = true; return "customName"; });
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("mongodb");
+        check.ShouldBeOfType<MongoDbHealthCheck>();
+        called.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void throw_argumentNullException_for_null_dbFactory()
+    {
+        var services = new ServiceCollection();
+        var healthChecksBuilder = services.AddHealthChecks();
+
+        Action addNull = () => healthChecksBuilder.AddMongoDb(dbFactory: null!);
+
+        addNull
+            .ShouldThrow<ArgumentNullException>();
     }
 }

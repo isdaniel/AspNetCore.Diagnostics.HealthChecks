@@ -24,6 +24,15 @@ services:
         volumes:
             - ./build/docker-services/solrcore:/var/solr/data/solrcore
             - ./build/docker-services/solrcoredown:/var/solr/data/solrcoredown
+    clickhouse:
+        image: clickhouse/clickhouse-server:24-alpine
+        environment:
+            - CLICKHOUSE_DB=${CLICKHOUSE_USER}
+            - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+            - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+            - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT="1"
+        ports:
+            - ${CLICKHOUSE_PORT}:8123
     postgres:
         image: postgres
         environment:
@@ -34,7 +43,7 @@ services:
     eventstore:
         image: eventstore/eventstore
         ports:
-          - "2113:2113"
+          - ${EVENTSTORE_GRPC_PORT}:2113
           - ${EVENTSTORE_PORT}:1113
         environment:
             - EVENTSTORE_INSECURE=true
@@ -48,26 +57,12 @@ services:
             - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
         ports:
             - ${MYSQL_PORT}:3306
-    zookeeper:
-        image: confluent/zookeeper
-        ports:
-            - ${ZOOKEEPER_PORT}:2181
     raven:
         image: ravendb/ravendb
         ports:
             - ${RAVENDB_PORT}:8080
         environment:
             - RAVEN_ARGS=--Setup.Mode=None
-    kafka:
-        image: confluent/kafka
-        environment:
-            - KAFKA_ADVERTISED_HOST_NAME=localhost
-            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-            - KAFKA_ADVERTISED_PORT=9092
-        ports:
-          - ${KAFKA_PORT}:9092
-        links:
-          - zookeeper
     rabbitmq:
         image: rabbitmq
         ports:
@@ -134,7 +129,7 @@ services:
         - "${TMPDIR:-/tmp/localstack}:/tmp/localstack"
         - "/var/run/docker.sock:/var/run/docker.sock"
     consul:
-        image: consul:latest
+        image: hashicorp/consul:latest
         ports:
           - "8500:8500"
           - "8600:8600"
@@ -165,6 +160,24 @@ services:
         image: postgres
         ports:
         - "8010:5432"
-        environment: 
+        environment:
         - POSTGRES_USER=postgres
         - POSTGRES_PASSWORD=Password12!
+    nats:
+        image: nats:latest
+        ports:
+        - "4222:4222"
+        - "8222:8222"
+        - "6222:6222"
+    influx:
+        image: influxdb:2.6.0
+        restart: always
+        ports:
+         - "8086:8086"
+        environment:
+          DOCKER_INFLUXDB_INIT_MODE: setup
+          DOCKER_INFLUXDB_INIT_USERNAME: ci_user
+          DOCKER_INFLUXDB_INIT_PASSWORD: password
+          DOCKER_INFLUXDB_INIT_ORG: influxdata
+          DOCKER_INFLUXDB_INIT_BUCKET: dummy
+

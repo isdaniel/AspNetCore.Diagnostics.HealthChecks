@@ -1,11 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector.DependencyInjection" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HealthChecks.MySql\HealthChecks.MySql.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.MySql" />
+  </ItemGroup>
+  
 </Project>

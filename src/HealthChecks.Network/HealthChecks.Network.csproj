@@ -1,16 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Health;Network;Sftp;Ftp;Tcp;DNS</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Network;Sftp;Ftp;Tcp;DNS</PackageTags>
     <Description>HealthChecks.Network is the health check package for network services.</Description>
-    <Version>$(HealthCheckNetwork)</Version>
+    <VersionPrefix>$(HealthCheckNetwork)</VersionPrefix>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SSH.NET"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>
-    <PackageReference Include="System.Buffers"/>
+    <PackageReference Include="SSH.NET" />
+    <PackageReference Include="System.Buffers" />
+    <Compile Include="../HealthCheckResultTask.cs" />
   </ItemGroup>
 
 </Project>

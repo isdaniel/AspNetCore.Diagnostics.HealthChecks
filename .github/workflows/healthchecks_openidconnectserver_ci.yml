@@ -1,20 +1,31 @@
 name: HealthChecks OpenIdConnectServer CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
     paths:
       - src/HealthChecks.OpenIdConnectServer/**
-      - test/HealthChecks.IdSvr.Tests/**
-      - .github/workflows/healthchecks_idsvr_ci.yml
+      - test/HealthChecks.OpenIdConnectServer.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_openidconnectserver_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
     tags-ignore:
       - release-*
+      - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.OpenIdConnectServer/**
-    - test/HealthChecks.IdSvr.Tests/**
-    - .github/workflows/healthchecks_idsvr_ci.yml
+      - src/HealthChecks.OpenIdConnectServer/**
+      - test/HealthChecks.OpenIdConnectServer.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_openidconnectserver_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
 
 jobs:
   build:
@@ -25,15 +36,37 @@ jobs:
         ports:
           - 8888:80
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.OpenIdConnectServer/HealthChecks.OpenIdConnectServer.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.OpenIdConnectServer/HealthChecks.OpenIdConnectServer.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.OpenIdConnectServer.Tests/HealthChecks.OpenIdConnectServer.Tests.csproj --verbosity normal
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Restore
+        run: |
+          dotnet restore ./src/HealthChecks.OpenIdConnectServer/HealthChecks.OpenIdConnectServer.csproj &&
+          dotnet restore ./test/HealthChecks.OpenIdConnectServer.Tests/HealthChecks.OpenIdConnectServer.Tests.csproj
+      - name: Check formatting
+        run: |
+          dotnet format --no-restore --verify-no-changes --severity warn ./src/HealthChecks.OpenIdConnectServer/HealthChecks.OpenIdConnectServer.csproj || (echo "Run 'dotnet format' to fix issues" && exit 1) &&
+          dotnet format --no-restore --verify-no-changes --severity warn ./test/HealthChecks.OpenIdConnectServer.Tests/HealthChecks.OpenIdConnectServer.Tests.csproj || (echo "Run 'dotnet format' to fix issues" && exit 1)
+      - name: Build
+        run: |
+          dotnet build --no-restore ./src/HealthChecks.OpenIdConnectServer/HealthChecks.OpenIdConnectServer.csproj &&
+          dotnet build --no-restore ./test/HealthChecks.OpenIdConnectServer.Tests/HealthChecks.OpenIdConnectServer.Tests.csproj
+      - name: Test
+        run: >
+          dotnet test
+          ./test/HealthChecks.OpenIdConnectServer.Tests/HealthChecks.OpenIdConnectServer.Tests.csproj
+          --no-restore
+          --no-build
+          --collect "XPlat Code Coverage"
+          --results-directory .coverage
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v5
+        with:
+          flags: OpenIdConnectServer
+          directory: .coverage

@@ -1,14 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
-  </PropertyGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity"/>
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="Azure.Identity" />
     <ProjectReference Include="..\..\src\HealthChecks.AzureServiceBus\HealthChecks.AzureServiceBus.csproj" />
   </ItemGroup>
 

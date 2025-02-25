@@ -1,65 +1,44 @@
-﻿using System;
-using System.Collections.Concurrent;
-using Azure.Core;
+using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using HealthChecks.AzureServiceBus.Configuration;
 
-namespace HealthChecks.AzureServiceBus
+namespace HealthChecks.AzureServiceBus;
+
+public abstract class AzureServiceBusHealthCheck<TOptions> where TOptions : AzureServiceBusHealthCheckOptions
 {
-    public abstract class AzureServiceBusHealthCheck
+    protected TOptions Options { get; }
+
+    private readonly ServiceBusClientProvider _clientProvider;
+
+    [Obsolete("Please, override ConnectionKey property instead.")]
+    protected string Prefix => Options.ConnectionString ?? Options.FullyQualifiedNamespace!;
+
+    protected virtual string ConnectionKey => Options.ConnectionString ?? Options.FullyQualifiedNamespace!;
+
+    protected AzureServiceBusHealthCheck(TOptions options, ServiceBusClientProvider clientProvider)
     {
-        protected static readonly ConcurrentDictionary<string, ServiceBusAdministrationClient>
-            ManagementClientConnections = new();
+        Options = options;
+        _clientProvider = clientProvider;
 
-        private string ConnectionString { get; }
+        if (!string.IsNullOrWhiteSpace(options.ConnectionString))
+            return;
 
-        protected string Prefix => ConnectionString ?? Endpoint;
-
-        private string Endpoint { get; }
-
-        private TokenCredential TokenCredential { get; }
-
-        protected AzureServiceBusHealthCheck(string connectionString)
+        if (!string.IsNullOrWhiteSpace(options.FullyQualifiedNamespace))
         {
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new ArgumentNullException(nameof(connectionString));
-            }
-
-            ConnectionString = connectionString;
+            Guard.ThrowIfNull(options.Credential);
+            return;
         }
 
-        protected AzureServiceBusHealthCheck(string endpoint, TokenCredential tokenCredential)
-        {
-            if (string.IsNullOrEmpty(endpoint))
-            {
-                throw new ArgumentNullException(nameof(endpoint));
-            }
-
-            if (tokenCredential == null)
-            {
-                throw new ArgumentNullException(nameof(tokenCredential));
-            }
-
-            Endpoint = endpoint;
-            TokenCredential = tokenCredential;
-        }
-
-
-        protected ServiceBusAdministrationClient CreateManagementClient()
-        {
-            ServiceBusAdministrationClient managementClient;
-            if (TokenCredential != null)
-            {
-                managementClient = new ServiceBusAdministrationClient(Endpoint, TokenCredential);
-            }
-            else
-            {
-                managementClient = new ServiceBusAdministrationClient(ConnectionString);
-            }
-
-            return managementClient;
-        }
-
-        protected abstract string ConnectionKey { get; }
+        throw new ArgumentException("A connection string or endpoint must be set!", nameof(options));
     }
+
+    protected ServiceBusClient CreateClient() =>
+        Options.Credential is null
+            ? _clientProvider.CreateClient(Options.ConnectionString)
+            : _clientProvider.CreateClient(Options.FullyQualifiedNamespace, Options.Credential);
+
+    protected ServiceBusAdministrationClient CreateManagementClient() =>
+        Options.Credential is null
+            ? _clientProvider.CreateManagementClient(Options.ConnectionString)
+            : _clientProvider.CreateManagementClient(Options.FullyQualifiedNamespace, Options.Credential);
 }

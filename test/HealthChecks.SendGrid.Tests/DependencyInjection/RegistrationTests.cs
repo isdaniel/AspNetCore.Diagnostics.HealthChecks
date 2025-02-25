@@ -1,53 +1,68 @@
-﻿using FluentAssertions;
-using FluentAssertions.Execution;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-using System.Linq;
-using Xunit;
+namespace HealthChecks.SendGrid.Tests.DependencyInjection;
 
-namespace HealthChecks.SendGrid.Tests.DependencyInjection
+public class sendgrid_registration_should
 {
-    public class sendgrid_registration_should
+    [Fact]
+    public void add_health_check_when_properly_configured()
     {
-        [Fact]
-        public void add_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddSendGrid("wellformed_but_invalid_token");
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddSendGrid("wellformed_but_invalid_token");
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            using (new AssertionScope())
+        registration.Name.ShouldBe("sendgrid");
+        check.ShouldBeOfType<SendGridHealthCheck>();
+    }
+
+    private class SendGridOptions
+    {
+        public string ApiKey { get; set; } = default!;
+    }
+
+    [Fact]
+    public void add_health_check_from_DI_when_properly_configured()
+    {
+        bool called = false;
+        var services = new ServiceCollection();
+
+        services.AddOptions<SendGridOptions>().Configure(options => options.ApiKey = "my_api_key");
+        services.AddHealthChecks()
+            .AddSendGrid(sp =>
             {
-                registration.Name.Should().Be("sendgrid");
-                check.GetType().Should().Be<SendGridHealthCheck>();
-            }
-        }
+                called = true;
+                return sp.GetRequiredService<IOptions<SendGridOptions>>().Value.ApiKey;
+            });
 
-        [Fact]
-        public void add_named_health_check_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services.AddHealthChecks()
-                .AddSendGrid("wellformed_but_invalid_token", "my-sendgrid-group");
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
 
-            var serviceProvider = services.BuildServiceProvider();
-            var options = serviceProvider.GetService<IOptions<HealthCheckServiceOptions>>();
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
 
-            var registration = options.Value.Registrations.First();
-            var check = registration.Factory(serviceProvider);
+        registration.Name.ShouldBe("sendgrid");
+        check.ShouldBeOfType<SendGridHealthCheck>();
+        called.ShouldBeTrue();
+    }
 
-            using (new AssertionScope())
-            {
-                registration.Name.Should().Be("my-sendgrid-group");
-                check.GetType().Should().Be(typeof(SendGridHealthCheck));
-            }
-        }
+    [Fact]
+    public void add_named_health_check_when_properly_configured()
+    {
+        var services = new ServiceCollection();
+        services.AddHealthChecks()
+            .AddSendGrid("wellformed_but_invalid_token", "my-sendgrid-group");
+
+        using var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<IOptions<HealthCheckServiceOptions>>();
+
+        var registration = options.Value.Registrations.First();
+        var check = registration.Factory(serviceProvider);
+
+        registration.Name.ShouldBe("my-sendgrid-group");
+        check.ShouldBeOfType<SendGridHealthCheck>();
     }
 }

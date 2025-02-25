@@ -1,0 +1,17 @@
+namespace HealthChecks.RabbitMQ
+{
+    public class RabbitMQHealthCheck : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+    {
+        public RabbitMQHealthCheck(RabbitMQ.Client.IConnection connection) { }
+        public RabbitMQHealthCheck(System.IServiceProvider serviceProvider, System.Func<System.IServiceProvider, System.Threading.Tasks.Task<RabbitMQ.Client.IConnection>> factory) { }
+        public System.Threading.Tasks.Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace Microsoft.Extensions.DependencyInjection
+{
+    public static class RabbitMQHealthCheckBuilderExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder AddRabbitMQ(this Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder builder, System.Func<System.IServiceProvider, System.Threading.Tasks.Task<RabbitMQ.Client.IConnection>> factory, string? name = null, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default) { }
+        public static Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder AddRabbitMQ(this Microsoft.Extensions.DependencyInjection.IHealthChecksBuilder builder, System.Func<System.IServiceProvider, RabbitMQ.Client.IConnection>? factory = null, string? name = null, Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus? failureStatus = default, System.Collections.Generic.IEnumerable<string>? tags = null, System.TimeSpan? timeout = default) { }
+    }
+}

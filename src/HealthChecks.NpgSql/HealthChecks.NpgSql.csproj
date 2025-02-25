@@ -1,15 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkVersion);$(NetStandardVersion)</TargetFrameworks>
-    <PackageTags>HealthCheck;Beat;Health;Postgress</PackageTags>
+    <TargetFrameworks>$(DefaultLibraryTargetFrameworks)</TargetFrameworks>
+    <PackageTags>$(PackageTags);Beat;Postgress</PackageTags>
     <Description>HealthChecks.NpgSql is a health check for Postgress Sql.</Description>
-    <Version>$(HealthCheckNpgSql)</Version>
+    <VersionPrefix>$(HealthCheckNpgSql)</VersionPrefix>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql"/>
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks"/>
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
 </Project>

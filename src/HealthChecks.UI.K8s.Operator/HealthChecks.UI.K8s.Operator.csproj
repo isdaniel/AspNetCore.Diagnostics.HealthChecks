@@ -1,22 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>$(NetFrameworkVersion)</TargetFramework>
+    <TargetFramework>$(DefaultNetCoreApp)</TargetFramework>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..</DockerfileContext>
-    <Version>$(HealthChecksUIK8sOperator)</Version>
+    <VersionPrefix>$(HealthChecksUIK8sOperator)</VersionPrefix>
+    <NoWarn>$(NoWarn);RCS1090</NoWarn>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="KubernetesClient"/>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
-    <PackageReference Include="Microsoft.Extensions.Hosting"/>
-    <PackageReference Include="Microsoft.Extensions.Http"/>
-    <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
+    <PackageReference Include="KubernetesClient" PackageOverride="12.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Serilog.Extensions.Logging" />
-    <PackageReference Include="Serilog.Sinks.ColoredConsole"/>
-    <PackageReference Include="System.Threading.Channels"/>
+    <PackageReference Include="Serilog.Sinks.ColoredConsole" />
+    <PackageReference Include="System.Threading.Channels" />
   </ItemGroup>
 
 </Project>

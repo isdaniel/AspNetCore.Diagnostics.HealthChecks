@@ -1,34 +1,38 @@
 name: HealthChecks Gcp.CloudFirestore CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
     paths:
       - src/HealthChecks.Gcp.CloudFirestore/**
       - test/HealthChecks.Gcp.CloudFirestore.Tests/**
+      - test/_SHARED/**
       - .github/workflows/healthchecks_gcp_cloudfirestore_ci.yml
+      - .github/workflows/reusable_ci_workflow.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
     tags-ignore:
       - release-*
+      - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.Gcp.CloudFirestore/**
-    - test/HealthChecks.Gcp.CloudFirestore.Tests/**
-    - .github/workflows/healthchecks_gcp_cloudfirestore_ci.yml
+      - src/HealthChecks.Gcp.CloudFirestore/**
+      - test/HealthChecks.Gcp.CloudFirestore.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_gcp_cloudfirestore_ci.yml
+      - .github/workflows/reusable_ci_workflow.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.Gcp.CloudFirestore/HealthChecks.Gcp.CloudFirestore.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.Gcp.CloudFirestore/HealthChecks.Gcp.CloudFirestore.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.Gcp.CloudFirestore.Tests/HealthChecks.Gcp.CloudFirestore.Tests.csproj --verbosity normal
+    uses: ./.github/workflows/reusable_ci_workflow.yml
+    with:
+      PROJECT_PATH: ./src/HealthChecks.Gcp.CloudFirestore/HealthChecks.Gcp.CloudFirestore.csproj
+      TEST_PROJECT_PATH: ./test/HealthChecks.Gcp.CloudFirestore.Tests/HealthChecks.Gcp.CloudFirestore.Tests.csproj
+      CODECOV_FLAGS: Gcp.CloudFirestore

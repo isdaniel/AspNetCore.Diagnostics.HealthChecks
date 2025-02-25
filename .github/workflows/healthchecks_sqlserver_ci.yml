@@ -1,42 +1,36 @@
 name: HealthChecks SQL Server DB CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
     paths:
       - src/HealthChecks.SqlServer/**
       - test/HealthChecks.SqlServer.Tests/**
+      - test/_SHARED/**
       - .github/workflows/healthchecks_sqlserver_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
     tags-ignore:
       - release-*
+      - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.SqlServer/**
-    - test/HealthChecks.SqlServer.Tests/**
-    - .github/workflows/healthchecks_sqlserver_ci.yml
+      - src/HealthChecks.SqlServer/**
+      - test/HealthChecks.SqlServer.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_sqlserver_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server
-        ports:
-          - 5433:1433
-        env: 
-          ACCEPT_EULA: Y
-          SA_PASSWORD: Password12!
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.SqlServer/HealthChecks.SqlServer.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.SqlServer/HealthChecks.SqlServer.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.SqlServer.Tests/HealthChecks.SqlServer.Tests.csproj --verbosity normal
+    uses: ./.github/workflows/reusable_ci_workflow.yml
+    with:
+      PROJECT_PATH: ./src/HealthChecks.SqlServer/HealthChecks.SqlServer.csproj
+      TEST_PROJECT_PATH: ./test/HealthChecks.SqlServer.Tests/HealthChecks.SqlServer.Tests.csproj
+      CODECOV_FLAGS: SqlServer

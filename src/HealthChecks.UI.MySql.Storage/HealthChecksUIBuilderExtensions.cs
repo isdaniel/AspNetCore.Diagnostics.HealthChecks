@@ -1,20 +1,27 @@
-﻿using HealthChecks.UI.Core.Data;
+using HealthChecks.UI.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+public static class HealthChecksUIBuilderExtensions
 {
-    public static class HealthChecksUIBuilderExtensions
+    public static HealthChecksUIBuilder AddMySqlStorage(
+        this HealthChecksUIBuilder builder,
+        string connectionString,
+        Action<DbContextOptionsBuilder>? configureOptions = null,
+        Action<MySqlDbContextOptionsBuilder>? configureMySqlOptions = null)
     {
-        public static HealthChecksUIBuilder AddMySqlStorage(this HealthChecksUIBuilder builder, string connectionString, Action<DbContextOptionsBuilder> configureOptions = null)
+        builder.Services.AddDbContext<HealthChecksDb>(options =>
         {
-            builder.Services.AddDbContext<HealthChecksDb>(options =>
+            configureOptions?.Invoke(options);
+            options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mySqlOptionsBuilder =>
             {
-                configureOptions?.Invoke(options);
-                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), s => s.MigrationsAssembly("HealthChecks.UI.MySql.Storage"));
+                mySqlOptionsBuilder.MigrationsAssembly("HealthChecks.UI.MySql.Storage");
+                configureMySqlOptions?.Invoke(mySqlOptionsBuilder);
             });
+        });
 
-            return builder;
-        }
+        return builder;
     }
 }

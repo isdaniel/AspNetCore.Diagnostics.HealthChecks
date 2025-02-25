@@ -155,7 +155,6 @@ h4 {
 }
 
 .hc-aside__logo {
-  background-color: var(--primaryColor);
   background-image: var(--logoImageUrl);
   background-position: center;
   background-size: cover;
@@ -330,7 +329,6 @@ h4 {
   height: 2rem;
   min-width: 3.5rem;
 }
-
 
 .hc-button:hover {
   background-image: var(--bgImageDarken);
@@ -575,7 +573,6 @@ h4 {
   padding: 2px;
   margin-right: 2px;
   margin-left: 2px;
-  height: 16px;  
   min-width: 4px;
   max-width: 112px;  
   border: 1px solid;

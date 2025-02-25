@@ -1,42 +1,36 @@
 name: HealthChecks NPGSQL DB CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ master ]
     paths:
       - src/HealthChecks.NpgSql/**
       - test/HealthChecks.Npgsql.Tests/**
+      - test/_SHARED/**
       - .github/workflows/healthchecks_npgsql_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
     tags-ignore:
       - release-*
+      - preview-*
+
   pull_request:
     branches: [ master ]
     paths:
-    - src/HealthChecks.NpgSql/**
-    - test/HealthChecks.Npgsql.Tests/**
-    - .github/workflows/healthchecks_npgsql_ci.yml
+      - src/HealthChecks.NpgSql/**
+      - test/HealthChecks.Npgsql.Tests/**
+      - test/_SHARED/**
+      - .github/workflows/healthchecks_npgsql_ci.yml
+      - Directory.Build.props
+      - Directory.Build.targets
+      - Directory.Packages.props
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    services:
-      npgsql:
-        image: postgres
-        ports:
-          - 8010:5432
-        env: 
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: Password12!
-    steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-        include-prerelease: false
-    - name: Restore dependencies
-      run: dotnet restore ./src/HealthChecks.NpgSql/HealthChecks.NpgSql.csproj
-    - name: Build
-      run: dotnet build --no-restore ./src/HealthChecks.NpgSql/HealthChecks.NpgSql.csproj
-    - name: Test
-      run: dotnet test ./test/HealthChecks.Npgsql.Tests/HealthChecks.Npgsql.Tests.csproj --verbosity normal
+    uses: ./.github/workflows/reusable_ci_workflow.yml
+    with:
+      PROJECT_PATH: ./src/HealthChecks.NpgSql/HealthChecks.NpgSql.csproj
+      TEST_PROJECT_PATH: ./test/HealthChecks.Npgsql.Tests/HealthChecks.Npgsql.Tests.csproj
+      CODECOV_FLAGS: Npgsql

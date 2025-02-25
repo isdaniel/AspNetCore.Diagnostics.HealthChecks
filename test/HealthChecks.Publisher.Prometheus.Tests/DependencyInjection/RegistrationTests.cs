@@ -1,23 +1,19 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Xunit;
+namespace HealthChecks.Publisher.ApplicationInsights.Tests.DependencyInjection;
 
-namespace HealthChecks.Publisher.ApplicationInsights.Tests.DependencyInjection
+public class prometheus_publisher_registration_should
 {
-    public class prometheus_publisher_registration_should
+    [Fact]
+    [Obsolete("AddPrometheusGatewayPublisher is obsolete")]
+    public void add_healthcheck_when_properly_configured()
     {
-        [Fact]
-        public void add_healthcheck_when_properly_configured()
-        {
-            var services = new ServiceCollection();
-            services
-                .AddHealthChecks()
-                .AddPrometheusGatewayPublisher("http://endpoint.com", "job_name");
+        var services = new ServiceCollection()
+            .AddHealthChecks()
+            .AddPrometheusGatewayPublisher("http://endpoint.com", "job_name")
+            .Services;
 
-            var serviceProvider = services.BuildServiceProvider();
-            var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
+        using var serviceProvider = services.BuildServiceProvider();
+        var publisher = serviceProvider.GetService<IHealthCheckPublisher>();
 
-            Assert.NotNull(publisher);
-        }
+        publisher.ShouldNotBeNull();
     }
 }

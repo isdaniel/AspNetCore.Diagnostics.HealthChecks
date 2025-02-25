@@ -1,144 +1,52 @@
-using Azure.Data.Tables;
 using HealthChecks.CosmosDb;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// Extension methods to configure <see cref="AzureCosmosDbHealthCheck"/>.
+/// </summary>
+public static class CosmosDbHealthCheckBuilderExtensions
 {
-    public static class CosmosDbHealthCheckBuilderExtensions
+    private const string NAME = "azure_cosmosdb";
+
+    /// <summary>
+    /// Add a health check for Azure Cosmos DB by registering <see cref="AzureCosmosDbHealthCheck"/> for given <paramref name="builder"/>.
+    /// </summary>
+    /// <param name="builder">The <see cref="IHealthChecksBuilder"/> to add <see cref="HealthCheckRegistration"/> to.</param>
+    /// <param name="clientFactory">
+    /// An optional factory to obtain <see cref="CosmosClient" /> instance.
+    /// When not provided, <see cref="CosmosClient" /> is simply resolved from <see cref="IServiceProvider"/>.
+    /// </param>
+    /// <param name="optionsFactory">
+    /// An optional factory to obtain <see cref="AzureCosmosDbHealthCheckOptions"/> used by the health check.
+    /// When not provided, defaults are used.
+    /// </param>
+    /// <param name="name">The health check name. Optional. If <c>null</c> the name 'azure_cosmosdb' will be used.</param>
+    /// <param name="failureStatus">
+    /// The <see cref="HealthStatus"/> that should be reported when the health check fails. Optional. If <c>null</c> then
+    /// the default status of <see cref="HealthStatus.Unhealthy"/> will be reported.
+    /// </param>
+    /// <param name="tags">A list of tags that can be used to filter sets of health checks. Optional.</param>
+    /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
+    /// <returns>The specified <paramref name="builder"/>.</returns>
+    public static IHealthChecksBuilder AddAzureCosmosDB(
+        this IHealthChecksBuilder builder,
+        Func<IServiceProvider, CosmosClient>? clientFactory = default,
+        Func<IServiceProvider, AzureCosmosDbHealthCheckOptions>? optionsFactory = default,
+        string? name = NAME,
+        HealthStatus? failureStatus = default,
+        IEnumerable<string>? tags = default,
+        TimeSpan? timeout = default)
     {
-        private const string COSMOS_NAME = "cosmosdb";
-        private const string TABLE_NAME = "azuretable";
-
-        /// <summary>
-        /// Add a health check for Azure CosmosDb database.
-        /// </summary>
-        /// <param name="builder">The <see cref="IHealthChecksBuilder"/>.</param>
-        /// <param name="connectionString">CosmosDb full connection string.</param>
-        /// <param name="database">Database to check for existence.</param>
-        /// <param name="name">The health check name. Optional. If <c>null</c> the type name 'cosmosdb' will be used for the name.</param>
-        /// <param name="failureStatus">
-        /// The <see cref="HealthStatus"/> that should be reported when the health check fails. Optional. If <c>null</c> then
-        /// the default status of <see cref="HealthStatus.Unhealthy"/> will be reported.
-        /// </param>
-        /// <param name="tags">A list of tags that can be used to filter sets of health checks. Optional.</param>
-        /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-        /// <returns>The <see cref="IHealthChecksBuilder"/>.</returns>
-        public static IHealthChecksBuilder AddCosmosDb(
-            this IHealthChecksBuilder builder,
-            string connectionString,
-            string database = default,
-            string name = default,
-            HealthStatus? failureStatus = default,
-            IEnumerable<string> tags = default,
-            TimeSpan? timeout = default)
-        {
-            return builder.Add(new HealthCheckRegistration(
-               name ?? COSMOS_NAME,
-               sp => new CosmosDbHealthCheck(connectionString, database, Enumerable.Empty<string>()),
-               failureStatus,
-               tags,
-               timeout));
-        }
-
-
-        /// <summary>
-        /// Add a health check for Azure CosmosDb database and specified collections.
-        /// </summary>
-        /// <param name="builder">The <see cref="IHealthChecksBuilder"/>.</param>
-        /// <param name="connectionString">CosmosDb full connection string.</param>
-        /// <param name="database">Database to check for existence.</param>
-        /// <param name="collections">Cosmos DB collections to check for existence.</param>
-        /// <param name="name">The health check name. Optional. If <c>null</c> the type name 'cosmosdb' will be used for the name.</param>
-        /// <param name="failureStatus">
-        /// The <see cref="HealthStatus"/> that should be reported when the health check fails. Optional. If <c>null</c> then
-        /// the default status of <see cref="HealthStatus.Unhealthy"/> will be reported.
-        /// </param>
-        /// <param name="tags">A list of tags that can be used to filter sets of health checks. Optional.</param>
-        /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-        /// <returns>The <see cref="IHealthChecksBuilder"/>.</returns>
-        public static IHealthChecksBuilder AddCosmosDbCollection(
-            this IHealthChecksBuilder builder,
-            string connectionString,
-            string database = default,
-            IEnumerable<string> collections = default,
-            string name = default,
-            HealthStatus? failureStatus = default,
-            IEnumerable<string> tags = default,
-            TimeSpan? timeout = default)
-        {
-            return builder.Add(new HealthCheckRegistration(
-               name ?? COSMOS_NAME,
-               sp => new CosmosDbHealthCheck(connectionString, database, collections),
-               failureStatus,
-               tags,
-               timeout));
-        }
-
-        /// <summary>
-        /// Add a health check for Azure CosmosDb/ Azure Storage table.
-        /// </summary>
-        /// <param name="builder">The <see cref="IHealthChecksBuilder"/>.</param>
-        /// <param name="connectionString">The CosmosDB Table or Azure Storage Table connection string. Credentials are included on connectionstring.</param>
-        /// <param name="tableName">Table name to check for existence.</param>
-        /// <param name="name">The health check name. Optional. If <c>null</c> the type name 'cosmosdb' will be used for the name.</param>
-        /// <param name="failureStatus">
-        /// The <see cref="HealthStatus"/> that should be reported when the health check fails. Optional. If <c>null</c> then
-        /// the default status of <see cref="HealthStatus.Unhealthy"/> will be reported.
-        /// </param>
-        /// <param name="tags">A list of tags that can be used to filter sets of health checks. Optional.</param>
-        /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-        /// <returns>The <see cref="IHealthChecksBuilder"/>.</returns>
-        public static IHealthChecksBuilder AddAzureTable(
-            this IHealthChecksBuilder builder,
-            string connectionString,
-            string tableName,
-            string name = default,
-            HealthStatus? failureStatus = default,
-            IEnumerable<string> tags = default,
-            TimeSpan? timeout = default)
-        {
-            return builder.Add(new HealthCheckRegistration(
-               name ?? TABLE_NAME,
-               sp => new TableServiceHealthCheck(connectionString, tableName),
-               failureStatus,
-               tags,
-               timeout));
-        }
-
-        /// <summary>
-        /// Add a health check for Azure CosmosDb/ Azure Storage table.
-        /// </summary>
-        /// <param name="builder">The <see cref="IHealthChecksBuilder"/>.</param>
-        /// <param name="endpoint">The CosmosDB Table or Azure Storage Table uri endopoint.</param>
-        /// <param name="credentials">The table shared key credentials to be used.</param>
-        /// <param name="tableName">Table name to check for existence.</param>
-        /// <param name="name">The health check name. Optional. If <c>null</c> the type name 'cosmosdb' will be used for the name.</param>
-        /// <param name="failureStatus">
-        /// The <see cref="HealthStatus"/> that should be reported when the health check fails. Optional. If <c>null</c> then
-        /// the default status of <see cref="HealthStatus.Unhealthy"/> will be reported.
-        /// </param>
-        /// <param name="tags">A list of tags that can be used to filter sets of health checks. Optional.</param>
-        /// <param name="timeout">An optional <see cref="TimeSpan"/> representing the timeout of the check.</param>
-        /// <returns>The <see cref="IHealthChecksBuilder"/>.</returns>
-        public static IHealthChecksBuilder AddAzureTable(
-            this IHealthChecksBuilder builder,
-            Uri endpoint,
-            TableSharedKeyCredential credentials,
-            string tableName,
-            string name = default,
-            HealthStatus? failureStatus = default,
-            IEnumerable<string> tags = default,
-            TimeSpan? timeout = default)
-        {
-            return builder.Add(new HealthCheckRegistration(
-               name ?? TABLE_NAME,
-               sp => new TableServiceHealthCheck(endpoint, credentials, tableName),
-               failureStatus,
-               tags,
-               timeout));
-        }
+        return builder.Add(new HealthCheckRegistration(
+           name ?? NAME,
+           sp => new AzureCosmosDbHealthCheck(
+                    cosmosClient: clientFactory?.Invoke(sp) ?? sp.GetRequiredService<CosmosClient>(),
+                    options: optionsFactory?.Invoke(sp)),
+           failureStatus,
+           tags,
+           timeout));
     }
 }
